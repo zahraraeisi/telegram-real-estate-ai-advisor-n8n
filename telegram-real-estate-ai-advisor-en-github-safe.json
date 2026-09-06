@@ -1,0 +1,511 @@
+{
+  "name": "Telegram Real Estate AI Advisor - EN - Public Demo",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "callback_query",
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1504,
+        -128
+      ],
+      "id": "8d46882b-f1b1-4302-b165-6921160766b3",
+      "name": "Telegram Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json || {};\nconst update = input.update || {};\n\nconst chatId =\n  input.chatId ||\n  update.chatId ||\n  update.message?.chat?.id ||\n  update.callback_query?.message?.chat?.id;\n\nconst callbackQueryId =\n  input.callbackQueryId ||\n  update.callback_query?.id ||\n  null;\n\nconst msg = String(\n  input.msg ??\n  update.text ??\n  update.message?.text ??\n  update.callback_query?.data ??\n  \"\"\n).trim();\n\nlet savedSession = input.session || null;\nif (typeof savedSession === \"string\") {\n  try { savedSession = JSON.parse(savedSession); } catch { savedSession = null; }\n}\n\nlet s = savedSession || {\n  step: \"MAIN_MENU\",\n  requestType: \"\",\n  temp: {},\n  aiSearch: {},\n  language: \"en\"\n};\n\ns.temp = s.temp || {};\ns.aiSearch = s.aiSearch || {};\ns.language = \"en\";\n\nconst PROPERTIES = [\n  {\n    id: \"DEMO-P-101\",\n    title: \"Bright one-bedroom apartment in Berlin\",\n    dealType: \"rent\",\n    propertyType: \"One-bedroom apartment\",\n    city: \"Berlin\",\n    district: \"Charlottenburg\",\n    rooms: 2,\n    size: \"52 m²\",\n    price: 1180,\n    deposit: \"€2,800\",\n    suitableFor: \"Couples, professionals, long-term renters\",\n    features: [\"Near public transport\", \"Equipped kitchen\", \"Suitable for long-term living\"],\n    description: \"A practical option for starting life in Berlin with good city access.\",\n    availability: \"Available next month\",\n    link: \"https://example.com/properties/demo-p-101\"\n  },\n  {\n    id: \"DEMO-P-102\",\n    title: \"Student studio in Hamburg\",\n    dealType: \"rent\",\n    propertyType: \"Studio\",\n    city: \"Hamburg\",\n    district: \"Altona\",\n    rooms: 1,\n    size: \"31 m²\",\n    price: 820,\n    deposit: \"€1,900\",\n    suitableFor: \"Students, trainees, single occupancy\",\n    features: [\"Near public transport\", \"Lower monthly cost\", \"Student-friendly\"],\n    description: \"A compact studio for students or independent living.\",\n    availability: \"Ready for viewing\",\n    link: \"https://example.com/properties/demo-p-102\"\n  },\n  {\n    id: \"DEMO-P-103\",\n    title: \"Two-bedroom apartment in Munich\",\n    dealType: \"rent\",\n    propertyType: \"Two-bedroom apartment\",\n    city: \"Munich\",\n    district: \"Sendling\",\n    rooms: 3,\n    size: \"74 m²\",\n    price: 1850,\n    deposit: \"€4,500\",\n    suitableFor: \"Small families, couples, skilled professionals\",\n    features: [\"Quiet area\", \"Good access\", \"Bright interior\"],\n    description: \"A quality rental option in Munich for a small household.\",\n    availability: \"Available in 6 weeks\",\n    link: \"https://example.com/properties/demo-p-103\"\n  },\n  {\n    id: \"DEMO-P-104\",\n    title: \"Private room in Frankfurt\",\n    dealType: \"rent\",\n    propertyType: \"Private room\",\n    city: \"Frankfurt\",\n    district: \"Bockenheim\",\n    rooms: 1,\n    size: \"18 m²\",\n    price: 590,\n    deposit: \"€1,200\",\n    suitableFor: \"Students, trainees, budget-conscious renters\",\n    features: [\"Near university\", \"Affordable\", \"Shared apartment\"],\n    description: \"A lower-cost option for starting life in Frankfurt.\",\n    availability: \"Available immediately\",\n    link: \"https://example.com/properties/demo-p-104\"\n  },\n  {\n    id: \"DEMO-P-105\",\n    title: \"Three-bedroom family apartment in Düsseldorf\",\n    dealType: \"rent\",\n    propertyType: \"Three-bedroom apartment\",\n    city: \"Düsseldorf\",\n    district: \"Oberkassel\",\n    rooms: 4,\n    size: \"96 m²\",\n    price: 2100,\n    deposit: \"€5,000\",\n    suitableFor: \"Families, long-term relocation\",\n    features: [\"Family-friendly area\", \"Balcony\", \"Near schools\"],\n    description: \"A larger apartment suitable for families needing more space.\",\n    availability: \"Available in 2 months\",\n    link: \"https://example.com/properties/demo-p-105\"\n  },\n  {\n    id: \"DEMO-P-106\",\n    title: \"Investment apartment for sale in Berlin\",\n    dealType: \"buy\",\n    propertyType: \"One-bedroom apartment\",\n    city: \"Berlin\",\n    district: \"Mitte\",\n    rooms: 2,\n    size: \"61 m²\",\n    price: 365000,\n    deposit: \"-\",\n    suitableFor: \"Investment, personal purchase, long-term rental strategy\",\n    features: [\"Central location\", \"Investment potential\", \"High rental demand\"],\n    description: \"A central Berlin purchase option with rental potential.\",\n    availability: \"Negotiable\",\n    link: \"https://example.com/properties/demo-p-106\"\n  }\n];\n\nfunction response(text, replyMarkup) {\n  return [{ json: { chatId, text, replyMarkup, session: s, callbackQueryId } }];\n}\n\nfunction responseAI(aiPrompt, replyMarkup) {\n  return [{ json: { chatId, useAI: true, aiPrompt, replyMarkup, session: s, callbackQueryId } }];\n}\n\nfunction mainMenuMarkup() {\n  return {\n    inline_keyboard: [\n      [{ text: \"🤖 Smart Property Advisor\", callback_data: \"smart_advisor\" }],\n      [{ text: \"📤 Submit a Property\", callback_data: \"sell_request\" }],\n      [{ text: \"📩 Request Advisor Contact\", callback_data: \"consult_request\" }],\n      [{ text: \"❓ FAQ\", callback_data: \"faq\" }],\n      [{ text: \"ℹ️ About This Demo\", callback_data: \"about_demo\" }]\n    ]\n  };\n}\n\nfunction backMarkup() {\n  return { inline_keyboard: [[{ text: \"🏠 Main Menu\", callback_data: \"back_to_main\" }]] };\n}\n\nfunction advisorMarkup() {\n  return {\n    inline_keyboard: [\n      [{ text: \"📩 Request Advisor Contact\", callback_data: \"consult_request\" }],\n      [{ text: \"🔄 Start New Property Search\", callback_data: \"smart_advisor\" }],\n      [{ text: \"🏠 Main Menu\", callback_data: \"back_to_main\" }]\n    ]\n  };\n}\n\nfunction fileOptionMarkup() {\n  return {\n    inline_keyboard: [\n      [{ text: \"📎 I have a file\", callback_data: \"file_demo\" }],\n      [{ text: \"Continue without file\", callback_data: \"no_file\" }],\n      [{ text: \"🏠 Main Menu\", callback_data: \"back_to_main\" }]\n    ]\n  };\n}\n\nfunction confirmRequestMarkup() {\n  return {\n    inline_keyboard: [\n      [{ text: \"✅ Submit Demo Request\", callback_data: \"confirm_request\" }],\n      [{ text: \"✏️ Edit Information\", callback_data: \"edit_request\" }],\n      [{ text: \"❌ Cancel\", callback_data: \"cancel_request\" }]\n    ]\n  };\n}\n\nfunction faqMarkup() {\n  return {\n    inline_keyboard: [\n      [{ text: \"Rental documents\", callback_data: \"faq_documents\" }],\n      [{ text: \"What is Kaution?\", callback_data: \"faq_kaution\" }],\n      [{ text: \"What is SCHUFA?\", callback_data: \"faq_schufa\" }],\n      [{ text: \"Can foreigners buy property?\", callback_data: \"faq_buy_foreigner\" }],\n      [{ text: \"Request advisor contact\", callback_data: \"faq_consult\" }],\n      [{ text: \"🏠 Main Menu\", callback_data: \"back_to_main\" }]\n    ]\n  };\n}\n\nfunction normalizeText(text) {\n  return String(text || \"\").toLowerCase().replace(/\\s+/g, \" \").trim();\n}\n\nfunction detectDealType(text) {\n  const t = normalizeText(text);\n  if (/(buy|purchase|investment|for sale)/.test(t)) return \"buy\";\n  if (/(rent|rental|lease)/.test(t)) return \"rent\";\n  return \"\";\n}\n\nfunction detectCity(text) {\n  const t = normalizeText(text);\n  const cities = [\"berlin\", \"hamburg\", \"munich\", \"frankfurt\", \"düsseldorf\", \"dusseldorf\"];\n  const found = cities.find(c => t.includes(c));\n  if (!found) return \"\";\n  return found === \"dusseldorf\" ? \"düsseldorf\" : found;\n}\n\nfunction detectBudget(text) {\n  const t = String(text || \"\").replace(/,/g, \"\");\n  const nums = t.match(/\\d{3,7}/g);\n  if (!nums) return \"\";\n  return Number(nums[0]);\n}\n\nfunction detectPropertyType(text) {\n  const t = normalizeText(text);\n  if (t.includes(\"private room\") || /\\broom\\b/.test(t)) return \"Private room\";\n  if (t.includes(\"studio\")) return \"Studio\";\n  if (/(one-bedroom|1 bedroom|one bedroom)/.test(t)) return \"One-bedroom apartment\";\n  if (/(two-bedroom|2 bedroom|two bedroom)/.test(t)) return \"Two-bedroom apartment\";\n  if (/(three-bedroom|3 bedroom|three bedroom|family apartment)/.test(t)) return \"Three-bedroom apartment\";\n  if (t.includes(\"apartment\") || t.includes(\"flat\")) return \"Apartment\";\n  return \"\";\n}\n\nfunction detectPeopleCount(text) {\n  const m = String(text || \"\").match(/(\\d+)\\s*(people|persons|person|adults?)/i);\n  return m ? m[1] : \"\";\n}\n\nfunction isGeneralQuestion(text) {\n  const t = normalizeText(text);\n  const keywords = [\n    \"what is\", \"what does\", \"difference\", \"schufa\", \"kaution\",\n    \"warmmiete\", \"kaltmiete\", \"anmeldung\", \"documents\", \"contract\", \"guarantor\"\n  ];\n  return keywords.some(k => t.includes(k));\n}\n\nfunction updateAiSearchFromText(text) {\n  const dealType = detectDealType(text);\n  const city = detectCity(text);\n  const budget = detectBudget(text);\n  const propertyType = detectPropertyType(text);\n  const peopleCount = detectPeopleCount(text);\n\n  if (dealType) s.aiSearch.dealType = dealType;\n  if (city) s.aiSearch.city = city;\n  if (budget) s.aiSearch.budget = budget;\n  if (propertyType) s.aiSearch.propertyType = propertyType;\n  if (peopleCount) s.aiSearch.peopleCount = peopleCount;\n\n  s.aiSearch.rawMessages = s.aiSearch.rawMessages || [];\n  s.aiSearch.rawMessages.push(text);\n}\n\nfunction nextMissingQuestion() {\n  if (!s.aiSearch.dealType) return \"Are you looking to rent or buy?\";\n  if (!s.aiSearch.city) return \"Which city are you interested in? For example, Berlin or Hamburg.\";\n  if (!s.aiSearch.budget) return \"What budget do you have in mind?\";\n  if (!s.aiSearch.propertyType) return \"What type of property are you looking for? Room, studio, or apartment?\";\n  return null;\n}\n\nfunction propertyText(p) {\n  const priceLabel = p.dealType === \"buy\"\n    ? `€${p.price.toLocaleString(\"en-US\")}`\n    : `€${p.price.toLocaleString(\"en-US\")} / month`;\n\n  return `ID: ${p.id}\nTitle: ${p.title}\nCity: ${p.city}\nDistrict: ${p.district}\nType: ${p.propertyType}\nSize: ${p.size}\nRooms: ${p.rooms}\nPrice: ${priceLabel}\nDeposit: ${p.deposit}\nSuitable for: ${p.suitableFor}\nFeatures: ${p.features.join(\", \")}\nDescription: ${p.description}\nAvailability: ${p.availability}\nDemo link: ${p.link}`;\n}\n\nfunction searchBestProperties() {\n  const need = s.aiSearch || {};\n\n  const scored = PROPERTIES.map(p => {\n    let score = 0;\n    const reasons = [];\n\n    if (need.dealType && p.dealType === need.dealType) {\n      score += 8; reasons.push(\"Matches the requested deal type\");\n    }\n\n    if (need.city && normalizeText(p.city) === need.city) {\n      score += 8; reasons.push(\"Located in the requested city\");\n    }\n\n    if (need.propertyType &&\n      (p.propertyType === need.propertyType ||\n      (need.propertyType === \"Apartment\" && p.propertyType.includes(\"apartment\")))) {\n      score += 6; reasons.push(\"Property type is close to the request\");\n    }\n\n    if (need.budget) {\n      if (p.price <= need.budget) {\n        score += 6; reasons.push(\"Within the stated budget\");\n      } else if (p.price <= need.budget * 1.2) {\n        score += 3; reasons.push(\"Slightly above budget\");\n      }\n    }\n\n    if (need.peopleCount) {\n      const people = Number(need.peopleCount);\n      if (people >= 3 && p.propertyType.includes(\"Three-bedroom\")) {\n        score += 3; reasons.push(\"Better suited to a larger household\");\n      }\n      if (people <= 2 && [\"One-bedroom apartment\", \"Studio\", \"Private room\"].includes(p.propertyType)) {\n        score += 3; reasons.push(\"Better suited to one or two people\");\n      }\n    }\n\n    return { property: p, score, reasons };\n  }).sort((a, b) => b.score - a.score);\n\n  const best = scored.filter(x => x.score > 0).slice(0, 3);\n  if (best.length) return best;\n\n  return scored.slice(0, 3).map(x => ({\n    ...x,\n    reasons: [\"No exact match was found; this is one of the closest demo options\"]\n  }));\n}\n\nfunction buildPropertySuggestionPrompt(matches) {\n  const need = s.aiSearch || {};\n  const exactEnough = matches[0]?.score >= 18;\n\n  return `\nYou are an initial real estate advisor for people looking for property in Germany.\n\nUser requirements:\nDeal type: ${need.dealType || \"unknown\"}\nCity: ${need.city || \"unknown\"}\nBudget: ${need.budget || \"unknown\"}\nProperty type: ${need.propertyType || \"unknown\"}\nPeople: ${need.peopleCount || \"unknown\"}\n\nSearch result:\n${exactEnough ? \"A few reasonably close options were found.\" : \"No exact match was found, so the closest demo options were selected.\"}\n\nAllowed property options:\n${matches.map((m, i) => `\nOption ${i + 1}\n${propertyText(m.property)}\nReasons: ${m.reasons.join(\", \")}\nMatch score: ${m.score}\n`).join(\"\\n---\\n\")}\n\nRules:\n- Recommend only from the options above.\n- Do not invent properties, prices, availability, or links.\n- If there is no exact match, say so clearly.\n- Keep the answer concise, practical, and professional.\n- End by mentioning that the user can request advisor contact from the menu.\n- Make clear that these are demo listings for initial evaluation only.\n- Output only the message text.\n`;\n}\n\nfunction buildInterruptionPrompt(userMessage, nextQuestion) {\n  return `\nYou are an initial real estate advisor for Germany.\n\nThe user asked this question during the property search:\n\"${userMessage}\"\n\nCurrent property search context:\n${JSON.stringify(s.aiSearch, null, 2)}\n\nAfter answering briefly, return the user to the previous search flow and ask:\n\"${nextQuestion}\"\n\nRules:\n- Answer the question briefly and clearly.\n- Do not give definitive legal, tax, immigration, or financial advice.\n- Do not invent properties or prices.\n- Keep the tone professional and helpful.\n- Output only the message text.\n`;\n}\n\nfunction buildGeneralAdvicePrompt(userMessage) {\n  return `\nYou are an initial real estate advisor for Germany.\n\nUser message:\n\"${userMessage}\"\n\nRules:\n- Give only general real-estate guidance.\n- Do not provide definitive legal, tax, immigration, or investment advice.\n- If the user is looking for a property, guide them to the Smart Property Advisor.\n- Do not invent listings, prices, or links.\n- Keep the response concise and professional.\n- Mention that this is a demo for initial guidance.\n- Output only the message text.\n`;\n}\n\nfunction generateRequestCode() {\n  return `DEMO-${Math.floor(1000 + Math.random() * 9000)}`;\n}\n\nfunction startRequest(type) {\n  s.step = \"REQ_NAME\";\n  s.requestType = type;\n  s.temp = {};\n\n  const title = type === \"Property Submission\"\n    ? `📤 Property Submission\n\nIn a real implementation, an owner or agent could submit initial property details for review.`\n    : `📩 Advisor Contact Request\n\nPlease provide a few details so the request can be reviewed.`;\n\n  return response(`${title}\n\nEnter your full name:`, backMarkup());\n}\n\nfunction requestReviewText() {\n  return `Please review the request:\n\nRequest type:\n${s.requestType || \"-\"}\n\nName:\n${s.temp.name || \"-\"}\n\nPhone / WhatsApp:\n${s.temp.phone || \"-\"}\n\nCity / Area:\n${s.temp.city || \"-\"}\n\nBudget / Financial note:\n${s.temp.budget || \"-\"}\n\nNotes:\n${s.temp.notes || \"-\"}\n\nFile:\n${s.temp.fileStatus || \"No file\"}\n\nIf everything is correct, submit the request.`;\n}\n\nif (!chatId) {\n  return [{ json: { chatId: \"\", text: \"Error: chatId was not received.\", session: s, callbackQueryId } }];\n}\n\nif ([\"/start\", \"start\", \"hello\", \"hi\", \"back_to_main\"].includes(msg.toLowerCase())) {\n  s.step = \"MAIN_MENU\";\n  s.requestType = \"\";\n  s.temp = {};\n  s.aiSearch = {};\n\n  return response(\n    `Welcome to the Real Estate AI Advisor Demo 👋\n\nThis workflow demonstrates initial property qualification, smart property matching, FAQ handling, and lead collection.\n\nAll listings and data in this public version are demo data.\n\nChoose an option below:`,\n    mainMenuMarkup()\n  );\n}\n\nif (msg === \"smart_advisor\") {\n  s.step = \"WAITING_SMART_ADVISOR\";\n  s.aiSearch = {};\n\n  return response(\n    `🤖 Smart Property Advisor\n\nDescribe what you are looking for in a natural sentence.\n\nExamples:\nI need an apartment to rent in Berlin.\nI am looking for a student studio in Hamburg.\nI want to buy an apartment in Berlin for around €350,000.\n\nThe recommendations in this demo are based only on sample listing data.`,\n    backMarkup()\n  );\n}\n\nif (s.step === \"WAITING_SMART_ADVISOR\") {\n  updateAiSearchFromText(msg);\n  const nextQuestion = nextMissingQuestion();\n\n  if (isGeneralQuestion(msg) && nextQuestion) {\n    return responseAI(buildInterruptionPrompt(msg, nextQuestion), backMarkup());\n  }\n\n  if (nextQuestion) return response(nextQuestion, backMarkup());\n\n  const matches = searchBestProperties();\n  s.step = \"MAIN_MENU\";\n  return responseAI(buildPropertySuggestionPrompt(matches), advisorMarkup());\n}\n\nif (msg === \"sell_request\") return startRequest(\"Property Submission\");\nif (msg === \"consult_request\") return startRequest(\"Advisor Contact\");\n\nif (msg === \"about_demo\") {\n  return response(\n    `ℹ️ About This Demo\n\nThis workflow demonstrates:\n\n- Initial real-estate inquiry handling\n- Smart requirement collection\n- Matching users with demo property data\n- FAQ responses\n- Lead collection\n- Session persistence\n\nIn a real implementation, the workflow can connect to a CRM, Google Sheets, property database, website, or internal system.`,\n    mainMenuMarkup()\n  );\n}\n\nif (msg === \"faq\") return response(\"❓ Choose a question:\", faqMarkup());\n\nconst FAQ = {\n  faq_documents:\n    \"For a rental application in Germany, landlords may ask for identification, proof of income, employment documents, SCHUFA, and other supporting documents. Requirements vary by landlord and property.\",\n  faq_kaution:\n    \"Kaution is the rental security deposit. In many cases it can be up to three months of the base rent and may be returned at the end of the tenancy if there are no outstanding obligations or damages.\",\n  faq_schufa:\n    \"SCHUFA is a credit-information report commonly requested in Germany. New arrivals may sometimes need alternative documentation depending on the landlord.\",\n  faq_buy_foreigner:\n    \"Foreign nationals can generally purchase property in Germany, but financing, taxes, contracts, and legal review should be discussed with qualified professionals.\",\n  faq_consult:\n    \"Choose “Request Advisor Contact” from the main menu and enter your contact details, preferred city, budget, and notes.\"\n};\n\nif (FAQ[msg]) {\n  return response(\n    `${FAQ[msg]}\n\nThis is general introductory information and not definitive legal or financial advice.`,\n    faqMarkup()\n  );\n}\n\nif (s.step === \"REQ_NAME\") {\n  s.temp.name = msg;\n  s.step = \"REQ_PHONE\";\n  return response(\"Enter your phone or WhatsApp number:\", backMarkup());\n}\n\nif (s.step === \"REQ_PHONE\") {\n  s.temp.phone = msg;\n  s.step = \"REQ_CITY\";\n  return response(\"Enter the city or area in Germany you are interested in:\", backMarkup());\n}\n\nif (s.step === \"REQ_CITY\") {\n  s.temp.city = msg;\n  s.step = \"REQ_BUDGET\";\n  return response(\n    s.requestType === \"Property Submission\"\n      ? \"Enter the approximate property price or a short financial note:\"\n      : \"Enter your approximate budget:\",\n    backMarkup()\n  );\n}\n\nif (s.step === \"REQ_BUDGET\") {\n  s.temp.budget = msg;\n  s.step = \"REQ_NOTES\";\n  return response(\"Add any notes. If none, type: none\", backMarkup());\n}\n\nif (s.step === \"REQ_NOTES\") {\n  s.temp.notes = msg;\n  s.step = \"REQ_FILE_OPTION\";\n\n  return response(\n    `In a real implementation, users could also upload files or documents.\n\nChoose how to continue:`,\n    fileOptionMarkup()\n  );\n}\n\nif (s.step === \"REQ_FILE_OPTION\" && msg === \"file_demo\") {\n  s.temp.fileStatus = \"User indicated that a file is available.\";\n  s.step = \"REQ_CONFIRM\";\n  return response(requestReviewText(), confirmRequestMarkup());\n}\n\nif (s.step === \"REQ_FILE_OPTION\" && msg === \"no_file\") {\n  s.temp.fileStatus = \"No file\";\n  s.step = \"REQ_CONFIRM\";\n  return response(requestReviewText(), confirmRequestMarkup());\n}\n\nif (msg === \"confirm_request\") {\n  const code = generateRequestCode();\n\n  s.step = \"MAIN_MENU\";\n  s.requestType = \"\";\n  s.temp = {};\n\n  return response(\n    `✅ Demo request submitted.\n\nDemo reference:\n${code}\n\nIn a real implementation, this data could be stored in a CRM, Google Sheet, or internal lead-management system.`,\n    mainMenuMarkup()\n  );\n}\n\nif (msg === \"edit_request\") {\n  s.step = \"REQ_NAME\";\n  s.temp = {};\n  return response(\"Let's update the information. Enter your full name:\", backMarkup());\n}\n\nif (msg === \"cancel_request\") {\n  s.step = \"MAIN_MENU\";\n  s.requestType = \"\";\n  s.temp = {};\n  return response(\"Request cancelled.\", mainMenuMarkup());\n}\n\nif (msg.length > 12) {\n  return responseAI(buildGeneralAdvicePrompt(msg), mainMenuMarkup());\n}\n\nreturn response(\n  `I didn't understand that message.\n\nPlease use the menu or open the Smart Property Advisor and describe what you are looking for.`,\n  mainMenuMarkup()\n);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -736,
+        -112
+      ],
+      "id": "2437352f-ad15-4c86-8d31-2e6ef1147c20",
+      "name": "Real Estate Advisor Logic"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5a283d52-8df7-4703-9f1a-3ca59f1e36dc",
+              "leftValue": "={{ $json.useAI }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -144,
+        32
+      ],
+      "id": "b33d511f-58de-4ae4-94fe-2341b3512d34",
+      "name": "IF - Need AI?"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        224,
+        496
+      ],
+      "id": "4ba93dc5-32b1-4868-a8e4-51f4f62237bd",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Real Estate Advisor Logic').first().json.aiPrompt }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.6,
+      "position": [
+        272,
+        256
+      ],
+      "id": "bc0e6827-aa3e-4886-865c-27afbf77e57f",
+      "name": "AI - Advisor Reply"
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiText =\n  $json.text ||\n  $json.output ||\n  $json.response ||\n  $json.result ||\n  $json.message ||\n  $json.data ||\n  \"\";\n\nconst original = $('Real Estate Advisor Logic').first().json;\n\nreturn [{\n  json: {\n    chatId: original.chatId,\n    text: String(aiText || \"Sorry, I couldn't generate an advisor response right now. Please try again.\").trim(),\n    replyMarkup: original.replyMarkup,\n    session: original.session,\n    callbackQueryId: original.callbackQueryId\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        -192
+      ],
+      "id": "470d0e14-c889-45c0-971a-af1abb17bbf8",
+      "name": "Format AI Response"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://api.telegram.org/bot' + $env.TELEGRAM_BOT_TOKEN + '/sendMessage' }}",
+        "sendBody": true,
+        "options": {},
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $json.chatId }}"
+            },
+            {
+              "name": "text",
+              "value": "Searching demo listings..."
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        208,
+        48
+      ],
+      "id": "8eaca7e1-0b1d-4238-a02b-c97fcbb612a0",
+      "name": "Send Loading Message"
+    },
+    {
+      "parameters": {
+        "jsCode": "const update = $json || {};\nconst raw = update.body || update.data || update;\n\nconst chatId =\n  raw.chatId ||\n  raw.chat_id ||\n  raw.message?.chat?.id ||\n  raw.callback_query?.message?.chat?.id ||\n  raw.callback_query?.from?.id ||\n  raw.from?.id ||\n  null;\n\nconst callbackQueryId =\n  raw.callback_query?.id ||\n  null;\n\nlet msg = String(\n  raw.text ??\n  raw.message?.text ??\n  raw.message?.caption ??\n  raw.callback_query?.data ??\n  \"\"\n).trim();\n\nif (!msg && chatId) msg = \"/start\";\nif (msg === \"Start\" || msg === \"start\") msg = \"/start\";\n\nreturn [{\n  json: {\n    update: raw,\n    chatId,\n    userKey: chatId ? String(chatId) : \"\",\n    msg,\n    callbackQueryId\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1312,
+        -128
+      ],
+      "id": "28c8d21f-7556-41bd-b43a-0bbfe85af1cc",
+      "name": "Normalize Telegram Input"
+    },
+    {
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "telegram_real_estate_sessions",
+        "columns": {
+          "column": [
+            {
+              "name": "chatId"
+            },
+            {
+              "name": "session"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -1520,
+        288
+      ],
+      "id": "81614858-b92e-4def-91d5-0058561ebc81",
+      "name": "telegram_sessions_setup"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOUR_DATA_TABLE_ID",
+          "mode": "id"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "=chatId",
+              "keyValue": "={{ $json.userKey }}"
+            }
+          ]
+        },
+        "limit": 1
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -1136,
+        32
+      ],
+      "id": "c88c2207-f310-416b-a367-ee08e132580a",
+      "name": "Data Table - Get Session",
+      "alwaysOutputData": true,
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOUR_DATA_TABLE_ID",
+          "mode": "id"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chatId",
+              "keyValue": "={{ String($json.chatId) }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "chatId": "={{ String($json.chatId) }}",
+            "session": "={{ JSON.stringify($json.session) }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "chatId",
+              "displayName": "chatId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "session",
+              "displayName": "session",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "dryRun": false
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -528,
+        -96
+      ],
+      "id": "d38aeb19-61e7-4fac-a59d-e7d9c7c19c48",
+      "name": "Data Table - Save Session"
+    },
+    {
+      "parameters": {
+        "jsCode": "const original = $('Real Estate Advisor Logic').first().json;\nreturn [{ json: original }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -336,
+        -80
+      ],
+      "id": "d35c8d84-1af3-47fb-a45b-87125d8fad5f",
+      "name": "Restore Bot Output"
+    },
+    {
+      "parameters": {
+        "jsCode": "const normalized = $('Normalize Telegram Input').first().json;\nconst row = $json || {};\n\nlet savedSession = row.session || null;\n\nif (typeof savedSession === \"string\") {\n  try { savedSession = JSON.parse(savedSession); } catch { savedSession = null; }\n}\n\nreturn [{\n  json: {\n    update: normalized.update,\n    chatId: normalized.chatId,\n    userKey: normalized.userKey,\n    msg: normalized.msg,\n    callbackQueryId: normalized.callbackQueryId,\n    session: savedSession\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -944,
+        -112
+      ],
+      "id": "97c8ed5e-7620-44c9-bfbf-a5b28a5b73f3",
+      "name": "Merge Session Input"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://api.telegram.org/bot' + $env.TELEGRAM_BOT_TOKEN + '/sendMessage' }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $('Restore Bot Output').first().json.chatId }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $('Restore Bot Output').first().json.text }}"
+            },
+            {
+              "name": "reply_markup",
+              "value": "={{ $('Restore Bot Output').first().json.replyMarkup ? JSON.stringify($('Restore Bot Output').first().json.replyMarkup) : '' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -32,
+        448
+      ],
+      "id": "7bc0c44d-0483-41c8-8b42-c95109edc157",
+      "name": "Send Normal Message"
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.telegram.org/bot' + $env.TELEGRAM_BOT_TOKEN + '/sendMessage' }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $('Format AI Response').first().json.chatId }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $('Format AI Response').first().json.text }}"
+            },
+            {
+              "name": "reply_markup",
+              "value": "={{ $('Format AI Response').first().json.replyMarkup ? JSON.stringify($('Format AI Response').first().json.replyMarkup) : '' }}"
+            }
+          ]
+        },
+        "options": {},
+        "method": "POST"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        368,
+        -192
+      ],
+      "id": "94c72504-92d6-4073-93b5-db08d8846cfc",
+      "name": "Send AI Message"
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Telegram Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Real Estate Advisor Logic": {
+      "main": [
+        [
+          {
+            "node": "Data Table - Save Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Need AI?": {
+      "main": [
+        [
+          {
+            "node": "Send Loading Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Normal Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI - Advisor Reply": {
+      "main": [
+        [
+          {
+            "node": "Format AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format AI Response": {
+      "main": [
+        [
+          {
+            "node": "Send AI Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI - Advisor Reply",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Loading Message": {
+      "main": [
+        [
+          {
+            "node": "AI - Advisor Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Telegram Input": {
+      "main": [
+        [
+          {
+            "node": "Data Table - Get Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Table - Get Session": {
+      "main": [
+        [
+          {
+            "node": "Merge Session Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Table - Save Session": {
+      "main": [
+        [
+          {
+            "node": "Restore Bot Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Bot Output": {
+      "main": [
+        [
+          {
+            "node": "IF - Need AI?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Session Input": {
+      "main": [
+        [
+          {
+            "node": "Real Estate Advisor Logic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "tags": []
+}
